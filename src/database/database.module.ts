@@ -4,9 +4,12 @@ import database from './constants/database';
 
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb://127.0.0.1/', {
-      dbName: database.DATABASE_NAME,
-    }),
+    MongooseModule.forRoot(
+      'mongodb+srv://sunilkuriyakose:kZLTw9SnIxSI0YgD@trdappcluster0.kn9kf.mongodb.net/',
+      {
+        dbName: database.DATABASE_NAME,
+      },
+    ),
   ],
   controllers: [],
   providers: [],
