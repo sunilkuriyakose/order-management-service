@@ -11,18 +11,28 @@ export class ListOrderRequestDTO {
   @IsOptional()
   @IsString()
   status?: string;
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  quantity?: number;
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(0.01)
+  orderValue?: number;
 
   @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(1)
-  page: number = 1;
+  page?: number = 1;
 
   @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(1)
-  limit: number = 10;
+  limit?: number = 10;
 
   @IsOptional()
   @IsString()

@@ -10,18 +10,22 @@ import mongoose, { Model } from 'mongoose';
 import { Order } from 'src/database/schemas/order.schema';
 import { OrderBasicInfoDTO } from './dto/orderBasicInfo.dto';
 import { ListOrderResponseDTO } from './dto/listOrderResponse.dto';
-import { APIFeatures } from 'src/util/apiFeatures';
+// import { APIFeatures } from 'src/util/apiFeatures';
 import { ListOrderFilter } from './types/list-order-filter.interface';
 import { CreateOrderDto } from './dto/createOrder.dto';
+import { OrderRepository } from './repository/order.repository';
 // import { mapDtoToEntity } from 'src/util/mapper/order.mapper';
 
 @Injectable()
 export class OrderService {
-  constructor(@InjectModel(Order.name) private orderModel: Model<Order>) {}
+  constructor(
+    @InjectModel(Order.name) private orderModel: Model<Order>,
+    private readonly orderRepository: OrderRepository,
+  ) {}
 
   async findAll(): Promise<Order[]> {
     Logger.log('This action returns all Orders');
-    return this.orderModel.find();
+    return this.orderRepository.findAll();
   }
 
   async findById(id: string): Promise<Order> {
@@ -33,49 +37,46 @@ export class OrderService {
         404,
       );
     }
-    return await this.orderModel.findById(id).exec();
+    return await this.orderRepository.findById(id);
   }
 
   async getOrderInfo(orderNo: string): Promise<Order> {
     Logger.log(
       'This action returns the order with the provided search Criteria',
     );
-    const order = await this.orderModel.findOne({ orderNo: orderNo }).exec();
+    const order = await this.orderRepository.find({ orderNo: orderNo });
     if (!order) {
       Logger.log('Order with Order No:${orderNo} is not available');
       throw new NotFoundException(
         `Order with Order No:${orderNo} is not available`,
       );
     }
-    return new this.orderModel({
-      id: order._id,
-      orderNo: order.orderNo,
-      businessName: order.businessName,
-      status: order.status,
-      orderValue: order.orderValue,
-      quantity: order.quantity,
+    return new Order({
+      id: order[0]._id,
+      orderNo: order[0].orderNo,
+      businessName: order[0].businessName,
+      status: order[0].status,
+      orderValue: order[0].orderValue,
+      quantity: order[0].quantity,
     });
   }
 
   async getAllOrdersWithSearchCriteria(
     filter: ListOrderFilter,
   ): Promise<ListOrderResponseDTO> {
-    const features = new APIFeatures(this.orderModel.find(), filter).filter();
-    const skipCount = (filter.page - 1) * filter.limit;
-    console.log(features);
-    const totalCount = await this.orderModel.countDocuments(features).exec();
-    const entities = await this.orderModel
-      .find(features)
-      .limit(filter.limit)
-      .skip(skipCount)
-      .exec();
+    const sort = {};
+    sort[filter.sortColumn] = filter.sortOrder === 'DESC' ? -1 : 1;
+    const entities = await this.orderRepository.find(filter);
+    const totalCount = entities.length;
     return plainToInstance(ListOrderResponseDTO, {
       orderList: plainToInstance(OrderBasicInfoDTO, entities, {
         excludeExtraneousValues: true,
       }),
       totalCount: totalCount,
-      page: filter.page,
-      limit: filter.limit,
+      page: filter.page || 1,
+      limit: filter.limit || 10,
+      sortColumn: filter.sortColumn || 'date',
+      sortOrder: filter.sortOrder || 'DESC',
     });
   }
 
@@ -86,16 +87,4 @@ export class OrderService {
       excludeExtraneousValues: true,
     });
   }
-
-  //   async getAllOrderWithFilter(query?: any): Promise<ListOrderResponseDTO> {
-  //     const features = new APIFeatures(this.orderModel.find(), query)
-  //       .filter()
-  //       .sort()
-  //       .limit()
-  //       .pagination();
-  //     //Execute the query
-  //     const orders = await features.mongooseQuery;
-
-  //     return orders;
-  //   }
 }

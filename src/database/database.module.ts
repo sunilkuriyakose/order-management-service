@@ -1,15 +1,23 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import database from './constants/database';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(
-      'mongodb+srv://sunilkuriyakose:kZLTw9SnIxSI0YgD@trdappcluster0.kn9kf.mongodb.net/',
-      {
-        dbName: database.DATABASE_NAME,
-      },
-    ),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `dev.env`,
+    }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('DB_URI'),
+        user: configService.get<string>('DB_USERNAME'),
+        pass: configService.get<string>('DB_PASSWORD'),
+        dbName: configService.get<string>('DB_DATABASE'),
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [],
   providers: [],

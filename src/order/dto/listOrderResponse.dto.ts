@@ -9,8 +9,8 @@ export class ListOrderResponseDTO {
   totalCount: number;
 
   @Expose()
-  page?: number;
+  page: number;
 
   @Expose()
-  limit?: number;
+  limit: number;
 }

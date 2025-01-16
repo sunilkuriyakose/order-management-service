@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Query,
+  UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
 import { OrderService } from './order.service';
@@ -17,8 +18,10 @@ import { CreateOrderDto } from './dto/createOrder.dto';
 import { OrderBasicInfoDTO } from './dto/orderBasicInfo.dto';
 import { ApiResponse, ApiBody } from '@nestjs/swagger';
 import { MessagePattern } from '@nestjs/microservices';
+import { LoggingInterceptor } from 'src/interceptor/logging.interceptor';
 
 @Controller('/Order')
+@UseInterceptors(LoggingInterceptor)
 export class OrderController {
   constructor(
     private readonly orderService: OrderService,
@@ -37,7 +40,7 @@ export class OrderController {
 
   @Get('getAllOrdersBySearchCriteria')
   async getOrderList(
-    @Query() requestDTO: ListOrderRequestDTO,
+    @Query(ValidationPipe) requestDTO: ListOrderRequestDTO,
   ): Promise<ResponseDTO<ListOrderResponseDTO>> {
     const responseDTO =
       await this.orderService.getAllOrdersWithSearchCriteria(requestDTO);
@@ -61,16 +64,4 @@ export class OrderController {
     const responseDTO = await this.orderService.createOrder(createOrderDto);
     return this.responseUtil.successResponse(0, responseDTO);
   }
-
-  //   @Get('/getAllOrdersByFilter')
-  //   async getFilteredOrderList(
-  //     @Res() response: any,
-  //     @Req() request: any,
-  //   ): Promise<ResponseDTO<ListOrderResponseDTO>> {
-  //     const responseDTO = await this.orderService.getAllOrderWithFilter(
-  //       request.query,
-  //     );
-  //     console.log(responseDTO);
-  //     return this.responseUtil.successResponse(0, responseDTO);
-  //   }
 }

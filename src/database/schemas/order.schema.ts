@@ -1,11 +1,11 @@
 /* eslint-disable prettier/prettier */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Document } from 'mongoose';
 
 export type OrderDocument = HydratedDocument<Order>;
 
 @Schema()
-export class Order {
+export class Order extends Document {
   @Prop()
   orderNo: string;
 
