@@ -1,20 +1,13 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  HttpException,
-} from '@nestjs/common';
+import { Injectable, Logger, HttpException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { plainToInstance } from 'class-transformer';
 import mongoose, { Model } from 'mongoose';
 import { Order } from 'src/database/schemas/order.schema';
-import { OrderBasicInfoDTO } from './dto/orderBasicInfo.dto';
 import { ListOrderResponseDTO } from './dto/listOrderResponse.dto';
-// import { APIFeatures } from 'src/util/apiFeatures';
 import { ListOrderFilter } from './types/list-order-filter.interface';
 import { CreateOrderDto } from './dto/createOrder.dto';
 import { OrderRepository } from './repository/order.repository';
-// import { mapDtoToEntity } from 'src/util/mapper/order.mapper';
+import { OrderMapper } from 'src/util/mapper/order.mapper';
 
 @Injectable()
 export class OrderService {
@@ -40,51 +33,31 @@ export class OrderService {
     return await this.orderRepository.findById(id);
   }
 
-  async getOrderInfo(orderNo: string): Promise<Order> {
-    Logger.log(
-      'This action returns the order with the provided search Criteria',
-    );
-    const order = await this.orderRepository.find({ orderNo: orderNo });
-    if (!order) {
-      Logger.log('Order with Order No:${orderNo} is not available');
-      throw new NotFoundException(
-        `Order with Order No:${orderNo} is not available`,
-      );
-    }
-    return new Order({
-      id: order[0]._id,
-      orderNo: order[0].orderNo,
-      businessName: order[0].businessName,
-      status: order[0].status,
-      orderValue: order[0].orderValue,
-      quantity: order[0].quantity,
-    });
-  }
-
   async getAllOrdersWithSearchCriteria(
     filter: ListOrderFilter,
   ): Promise<ListOrderResponseDTO> {
-    const sort = {};
-    sort[filter.sortColumn] = filter.sortOrder === 'DESC' ? -1 : 1;
-    const entities = await this.orderRepository.find(filter);
-    const totalCount = entities.length;
-    return plainToInstance(ListOrderResponseDTO, {
-      orderList: plainToInstance(OrderBasicInfoDTO, entities, {
-        excludeExtraneousValues: true,
+    const mongoFilter = this.orderRepository.buildFilter(filter);
+    const [entities, totalCount] = await Promise.all([
+      this.orderRepository.find({
+        ...mongoFilter,
+        page: filter.page,
+        limit: filter.limit,
+        sortColumn: filter.sortColumn,
+        sortOrder: filter.sortOrder,
       }),
-      totalCount: totalCount,
-      page: filter.page || 1,
-      limit: filter.limit || 10,
-      sortColumn: filter.sortColumn || 'date',
-      sortOrder: filter.sortOrder || 'DESC',
+      this.orderRepository.countDocuments(mongoFilter),
+    ]);
+
+    return plainToInstance(ListOrderResponseDTO, {
+      orderList: entities.map((entity) => OrderMapper.toBasicInfoDTO(entity)),
+      totalCount,
+      page: filter.page ?? 1,
+      limit: filter.limit ?? 10,
     });
   }
 
   async createOrder(createOrderDto: CreateOrderDto) {
-    const newOrder = new this.orderModel(createOrderDto);
-    const result = await newOrder.save();
-    return plainToInstance(OrderBasicInfoDTO, result, {
-      excludeExtraneousValues: true,
-    });
+    const result = await this.orderRepository.create(createOrderDto);
+    return OrderMapper.toBasicInfoDTO(result);
   }
 }

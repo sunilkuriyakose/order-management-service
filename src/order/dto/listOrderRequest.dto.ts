@@ -9,8 +9,9 @@ export class ListOrderRequestDTO {
   @IsString()
   businessName?: string;
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsString({ each: true })
+  @IsIn(['In Progress', 'Delivered', 'Cancelled'], { each: true })
+  status?: string[];
   @Type(() => Number)
   @IsOptional()
   @IsNumber()

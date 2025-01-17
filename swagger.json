@@ -1,1 +1,250 @@
-{"openapi":"3.0.0","paths":{"/Order/getAllOrders":{"get":{"operationId":"OrderController_getOrders","parameters":[],"responses":{"200":{"description":""}},"tags":["Order"]}},"/Order/getOrderById{id}":{"get":{"operationId":"OrderController_findById","parameters":[{"name":"id","required":true,"in":"path","schema":{"type":"string"}}],"responses":{"200":{"description":""}},"tags":["Order"]}},"/Order/getAllOrdersBySearchCriteria":{"get":{"operationId":"OrderController_getOrderList","parameters":[],"responses":{"200":{"description":""}},"tags":["Order"]}},"/Order/createOrder":{"post":{"operationId":"OrderController_createOrder","parameters":[],"requestBody":{"required":true,"description":"Json structure for order object","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Order"}}}},"responses":{"201":{"description":"Order has been successfully placed."},"403":{"description":"Forbidden."}},"tags":["Order"]}}},"info":{"title":"Order Management Service","description":"Mircoservice which acts on set of activities and processes involved in managing customer orders from the order placement to final fulfillment and delivery.","version":"1.0","contact":{}},"tags":[{"name":"order","description":""}],"servers":[],"components":{"schemas":{"Order":{"type":"object","properties":{}}}},"externalDocs":{"description":"order-management-service/swagger.json","url":"/swagger.json"}}
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/swagger.json": {
+      "get": {
+        "operationId": "SwaggerController_getSwaggerJson",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Swagger"
+        ]
+      }
+    },
+    "/Order/getAllOrders": {
+      "get": {
+        "description": "Retrieves a list of all orders in the system",
+        "operationId": "OrderController_getOrders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get all orders",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/Order/getOrderById{id}": {
+      "get": {
+        "description": "Retrieves a specific order using its ID",
+        "operationId": "OrderController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "summary": "Get order by ID",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/Order/getAllOrdersBySearchCriteria": {
+      "get": {
+        "description": "Retrieves orders based on search criteria with pagination and sorting",
+        "operationId": "OrderController_getOrderList",
+        "parameters": [
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sort direction",
+            "schema": {
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number for pagination",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by order status. Can select multiple statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "In Progress",
+                  "Delivered",
+                  "Cancelled"
+                ]
+              }
+            }
+          },
+          {
+            "name": "businessName",
+            "required": false,
+            "in": "query",
+            "description": "Filter by business name",
+            "schema": {}
+          },
+          {
+            "name": "orderNo",
+            "required": false,
+            "in": "query",
+            "description": "Filter by order number",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOrderResponseDTO"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Search orders with filters",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/Order/createOrder": {
+      "post": {
+        "description": "Creates a new order in the system with the provided details",
+        "operationId": "OrderController_createOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Order creation payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              },
+              "examples": {
+                "example1": {
+                  "value": {
+                    "orderNo": "AE-A-2501001",
+                    "businessName": "ABC Corp",
+                    "status": "In Progress",
+                    "quantity": 1,
+                    "orderValue": 100.5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order has been successfully placed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderBasicInfoDTO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input data."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        },
+        "summary": "Create new order",
+        "tags": [
+          "Orders"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Order Management Service",
+    "description": "Mircoservice which acts on set of activities and processes involved in managing customer orders from the order placement to final fulfillment and delivery.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "order",
+      "description": ""
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "Order": {
+        "type": "object",
+        "properties": {}
+      },
+      "ListOrderResponseDTO": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "OrderBasicInfoDTO": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}

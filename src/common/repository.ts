@@ -2,7 +2,7 @@ import { FilterQuery, Model, SaveOptions } from 'mongoose';
 import { Document } from 'mongoose';
 import { IRepository } from './interface/repository.interface';
 
-import { CreatedModel, RemovedModel } from '../util/entity';
+import { RemovedModel } from '../util/entity';
 
 export class Repository<T extends Document> implements IRepository<T> {
   constructor(private readonly model: Model<T>) {}
@@ -10,11 +10,11 @@ export class Repository<T extends Document> implements IRepository<T> {
     return await this.model.findById(id).exec();
   }
 
-  async create(doc: object, saveOptions?: SaveOptions): Promise<CreatedModel> {
+  async create(doc: object, saveOptions?: SaveOptions): Promise<any> {
     const createdEntity = new this.model(doc);
     const savedResult = await createdEntity.save(saveOptions);
 
-    return { id: savedResult.id, created: !!savedResult.id };
+    return savedResult;
   }
   async find(query: any): Promise<T[]> {
     const { filter, options } = this.splitFilterAndOptions(query);
@@ -34,7 +34,8 @@ export class Repository<T extends Document> implements IRepository<T> {
     return { deletedCount, deleted: !!deletedCount };
   }
 
-  async countDocuments(filter: FilterQuery<T>) {
+  async countDocuments(query: FilterQuery<T>) {
+    const filter = this.splitFilterAndOptions(query).filter;
     const filteredCount = await this.model.countDocuments(filter);
     return filteredCount;
   }
