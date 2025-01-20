@@ -16,7 +16,7 @@ import { StoreInfo, StoreInfoSchema } from './schemas/store-info.schema';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: `local.env`,
+      envFilePath: `dev.env`,
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
