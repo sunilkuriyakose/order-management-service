@@ -6,14 +6,14 @@ import { plainToInstance } from 'class-transformer';
 import { OrderBasicInfoDTO } from 'src/order/dto/orderBasicInfo.dto';
 
 export class OrderMapper {
-  static toEntity(dto: CreateOrderDto): Order {
-    const order = new Order();
-    order.orderNo = dto.orderNo;
-    order.businessName = dto.businessName;
-    order.orderValue = dto.orderValue;
-    order.quantity = dto.quantity;
-    order.status = dto.status;
-    return order;
+  static toEntity(dto: CreateOrderDto): Partial<Order> {
+    return {
+      orderNo: dto.orderNo,
+      businessName: dto.businessName,
+      orderValue: dto.orderValue,
+      quantity: dto.quantity,
+      status: dto.status,
+    };
   }
 
   static toFilter(dto: ListOrderRequestDTO): ListOrderFilter {

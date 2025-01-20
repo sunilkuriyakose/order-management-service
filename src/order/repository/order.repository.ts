@@ -21,7 +21,9 @@ export class OrderRepository extends Repository<Order> {
       query.businessName = { $regex: filter.businessName, $options: 'i' };
     }
     if (filter.status) {
-      query.status = filter.status;
+      query.status = {
+        $in: Array.isArray(filter.status) ? filter.status : [filter.status],
+      };
     }
     if (filter.quantity) {
       query.quantity = filter.quantity;
@@ -31,5 +33,14 @@ export class OrderRepository extends Repository<Order> {
     }
 
     return query;
+  }
+
+  async findById(id: string): Promise<Order> {
+    return this.orderModel
+      .findById(id)
+      .populate('product_details')
+      .populate('shipment_details')
+      .populate('store_info')
+      .exec();
   }
 }

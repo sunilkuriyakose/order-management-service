@@ -82,6 +82,15 @@
         "operationId": "OrderController_getOrderList",
         "parameters": [
           {
+            "name": "sortColumn",
+            "required": false,
+            "in": "query",
+            "description": "Column to sort by (e.g., date, orderNo, orderValue)",
+            "schema": {
+              "example": "date"
+            }
+          },
+          {
             "name": "sortOrder",
             "required": false,
             "in": "query",
@@ -178,11 +187,22 @@
               "examples": {
                 "example1": {
                   "value": {
-                    "orderNo": "AE-A-2501001",
                     "businessName": "ABC Corp",
                     "status": "In Progress",
-                    "quantity": 1,
-                    "orderValue": 100.5
+                    "quantity": 10,
+                    "orderValue": 210,
+                    "product_details": [
+                      {
+                        "id": 1,
+                        "sku": "AXMMOSGH12GB12GBBLK",
+                        "unit_price": 20,
+                        "quantity": 10,
+                        "vat_percent": "5%",
+                        "vat": 10,
+                        "total_price": 200,
+                        "grand_total": 210
+                      }
+                    ]
                   }
                 }
               }

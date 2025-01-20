@@ -1,26 +1,58 @@
 import { Type } from 'class-transformer';
-import { IsNumber, Min, IsString, IsIn, IsNotEmpty } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
+
+export class ProductDetailsDto {
+  @IsString()
+  @IsNotEmpty()
+  sku: string;
+
+  @IsNumber()
+  unit_price: number;
+
+  @IsNumber()
+  quantity: number;
+
+  @IsString()
+  vat_percent: string;
+
+  @IsNumber()
+  vat: number;
+
+  @IsNumber()
+  total_price: number;
+
+  @IsNumber()
+  grand_total: number;
+}
 
 export class CreateOrderDto {
-  @IsNotEmpty()
   @IsString()
-  orderNo: string;
-  @IsNotEmpty()
-  @IsString()
-  businessName: string;
-  @IsNotEmpty()
-  @IsString()
-  @IsIn(['In Progress', 'Delivered', 'Cancelled'])
-  status: string;
+  @IsOptional()
+  orderNo?: string;
 
-  @Type(() => Number)
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(1)
-  quantity: number = 1;
-
-  @Type(() => Number)
-  @IsNotEmpty()
   @IsNumber()
   orderValue: number;
+
+  @IsNumber()
+  quantity: number;
+
+  @IsString()
+  @IsNotEmpty()
+  businessName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  status: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductDetailsDto)
+  product_details: ProductDetailsDto[];
 }

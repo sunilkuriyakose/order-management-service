@@ -106,6 +106,12 @@ export class OrderController {
     enum: ['ASC', 'DESC'],
     description: 'Sort direction',
   })
+  @ApiQuery({
+    name: 'sortColumn',
+    required: false,
+    description: 'Column to sort by (e.g., date, orderNo, orderValue)',
+    example: 'date',
+  })
   @ApiResponse({
     status: 200,
     description: 'Orders retrieved successfully',
@@ -142,11 +148,22 @@ export class OrderController {
     examples: {
       example1: {
         value: {
-          orderNo: 'AE-A-2501001',
           businessName: 'ABC Corp',
           status: 'In Progress',
-          quantity: 1,
-          orderValue: 100.5,
+          quantity: 10,
+          orderValue: 210,
+          product_details: [
+            {
+              id: 1,
+              sku: 'AXMMOSGH12GB12GBBLK',
+              unit_price: 20.0,
+              quantity: 10,
+              vat_percent: '5%',
+              vat: 10,
+              total_price: 200,
+              grand_total: 210,
+            },
+          ],
         },
       },
     },

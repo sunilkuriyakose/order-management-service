@@ -8,12 +8,20 @@ import { ListOrderFilter } from './types/list-order-filter.interface';
 import { CreateOrderDto } from './dto/createOrder.dto';
 import { OrderRepository } from './repository/order.repository';
 import { OrderMapper } from 'src/util/mapper/order.mapper';
+import { ProductDetails } from 'src/database/schemas/product-details.schema';
+import { OrderNumberUtil } from 'src/util/order-number.util';
+import { ShipmentDetails } from 'src/database/schemas/shipment-details.schema';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<Order>,
+    @InjectModel(ProductDetails.name)
+    private productDetailsModel: Model<ProductDetails>,
+    @InjectModel(ShipmentDetails.name)
+    private shipmentDetailsModel: Model<ShipmentDetails>,
     private readonly orderRepository: OrderRepository,
+    private readonly orderNumberUtil: OrderNumberUtil,
   ) {}
 
   async findAll(): Promise<Order[]> {
@@ -30,7 +38,16 @@ export class OrderService {
         404,
       );
     }
-    return await this.orderRepository.findById(id);
+
+    const order = await this.orderRepository.findById(id);
+    if (!order) {
+      throw new HttpException(
+        'Order with the provided id is not available',
+        404,
+      );
+    }
+
+    return order;
   }
 
   async getAllOrdersWithSearchCriteria(
@@ -57,7 +74,59 @@ export class OrderService {
   }
 
   async createOrder(createOrderDto: CreateOrderDto) {
-    const result = await this.orderRepository.create(createOrderDto);
+    const orderNo = await this.orderNumberUtil.generateOrderNo();
+    const orderEntity = OrderMapper.toEntity({
+      ...createOrderDto,
+      orderNo,
+    });
+    const result = await this.orderRepository.create(orderEntity);
+
+    // Create product details
+    if (createOrderDto.product_details?.length) {
+      const savedProductDetails = [];
+      for (let i = 0; i < createOrderDto.product_details.length; i++) {
+        const product = createOrderDto.product_details[i];
+        const productDetail = await this.productDetailsModel.create({
+          ...product,
+          id: i + 1,
+          order_id: result._id,
+        });
+        savedProductDetails.push(productDetail);
+      }
+
+      // Create shipment details
+      const shipmentDetail = await this.shipmentDetailsModel.create({
+        id: 1, // First shipment for the order
+        order_id: result._id,
+        order_no: orderNo,
+        status: 'Requested',
+        delivered_quantity: 0,
+        delivered_by: 'Not Assigned',
+        delivered_date: new Date(),
+        total_price: result.orderValue,
+        grand_total: result.orderValue,
+      });
+
+      // Update order with both product and shipment details
+      const updatedOrder = await this.orderModel
+        .findByIdAndUpdate(
+          result._id,
+          {
+            $push: {
+              product_details: { $each: savedProductDetails },
+            },
+            $set: {
+              shipment_details: [shipmentDetail],
+            },
+          },
+          { new: true },
+        )
+        .populate('product_details')
+        .populate('shipment_details');
+
+      return OrderMapper.toBasicInfoDTO(updatedOrder);
+    }
+
     return OrderMapper.toBasicInfoDTO(result);
   }
 }

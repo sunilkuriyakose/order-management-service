@@ -1,12 +1,22 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Order, OrderSchema } from './schemas/order.schema';
+import {
+  ProductDetails,
+  ProductDetailsSchema,
+} from './schemas/product-details.schema';
+import {
+  ShipmentDetails,
+  ShipmentDetailsSchema,
+} from './schemas/shipment-details.schema';
+import { StoreInfo, StoreInfoSchema } from './schemas/store-info.schema';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: `dev.env`,
+      envFilePath: `local.env`,
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -18,8 +28,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    MongooseModule.forFeature([
+      { name: Order.name, schema: OrderSchema },
+      { name: ProductDetails.name, schema: ProductDetailsSchema },
+      { name: ShipmentDetails.name, schema: ShipmentDetailsSchema },
+      { name: StoreInfo.name, schema: StoreInfoSchema },
+    ]),
   ],
   controllers: [],
   providers: [],
+  exports: [MongooseModule],
 })
 export class DatabaseModule {}
