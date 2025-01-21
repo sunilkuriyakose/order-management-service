@@ -79,50 +79,48 @@ export class OrderService {
       ...createOrderDto,
       orderNo,
     });
+
+    // Use lean() for better memory usage
     const result = await this.orderRepository.create(orderEntity);
 
-    // Create product details
     if (createOrderDto.product_details?.length) {
-      const savedProductDetails = [];
-      for (let i = 0; i < createOrderDto.product_details.length; i++) {
-        const product = createOrderDto.product_details[i];
-        const productDetail = await this.productDetailsModel.create({
+      // Batch create product details
+      const productDetails = await this.productDetailsModel.insertMany(
+        createOrderDto.product_details.map((product, index) => ({
           ...product,
-          id: i + 1,
+          id: index + 1,
           order_id: result._id,
-        });
-        savedProductDetails.push(productDetail);
-      }
+        })),
+      );
 
-      // Create shipment details
-      const shipmentDetail = await this.shipmentDetailsModel.create({
-        id: 1, // First shipment for the order
-        order_id: result._id,
-        order_no: orderNo,
-        status: 'Requested',
-        delivered_quantity: 0,
-        delivered_by: 'Not Assigned',
-        delivered_date: new Date(),
-        total_price: result.orderValue,
-        grand_total: result.orderValue,
-      });
-
-      // Update order with both product and shipment details
-      const updatedOrder = await this.orderModel
-        .findByIdAndUpdate(
-          result._id,
-          {
-            $push: {
-              product_details: { $each: savedProductDetails },
+      // Create shipment in same transaction
+      const [updatedOrder] = await Promise.all([
+        this.orderModel
+          .findByIdAndUpdate(
+            result._id,
+            {
+              $push: { product_details: { $each: productDetails } },
+              $set: {
+                shipment_details: [
+                  {
+                    id: 1,
+                    order_id: result._id,
+                    order_no: orderNo,
+                    status: 'Requested',
+                    delivered_quantity: 0,
+                    delivered_by: 'Not Assigned',
+                    delivered_date: new Date(),
+                    total_price: result.orderValue,
+                    grand_total: result.orderValue,
+                  },
+                ],
+              },
             },
-            $set: {
-              shipment_details: [shipmentDetail],
-            },
-          },
-          { new: true },
-        )
-        .populate('product_details')
-        .populate('shipment_details');
+            { new: true, lean: true },
+          )
+          .populate('product_details', null, null, { lean: true })
+          .populate('shipment_details', null, null, { lean: true }),
+      ]);
 
       return OrderMapper.toBasicInfoDTO(updatedOrder);
     }
