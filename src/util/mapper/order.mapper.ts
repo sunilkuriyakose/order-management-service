@@ -3,7 +3,7 @@ import { Order } from 'src/database/schemas/order.schema';
 import { ListOrderRequestDTO } from 'src/order/dto/listOrderRequest.dto';
 import { ListOrderFilter } from 'src/order/types/list-order-filter.interface';
 import { plainToInstance } from 'class-transformer';
-import { OrderBasicInfoDTO } from 'src/order/dto/orderBasicInfo.dto';
+import { OrderBasicInfoDTO } from '../../order/dto/orderBasicInfo.dto';
 
 export class OrderMapper {
   static toEntity(dto: CreateOrderDto): Partial<Order> {

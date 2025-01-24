@@ -2,18 +2,20 @@ import { Injectable, Logger, HttpException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { plainToInstance } from 'class-transformer';
 import mongoose, { Model } from 'mongoose';
-import { Order } from 'src/database/schemas/order.schema';
+import { Order } from '../database/schemas/order.schema';
 import { ListOrderResponseDTO } from './dto/listOrderResponse.dto';
 import { ListOrderFilter } from './types/list-order-filter.interface';
 import { CreateOrderDto } from './dto/createOrder.dto';
 import { OrderRepository } from './repository/order.repository';
-import { OrderMapper } from 'src/util/mapper/order.mapper';
-import { ProductDetails } from 'src/database/schemas/product-details.schema';
-import { OrderNumberUtil } from 'src/util/order-number.util';
-import { ShipmentDetails } from 'src/database/schemas/shipment-details.schema';
+import { OrderMapper } from '../util/mapper/order.mapper';
+import { ProductDetails } from '../database/schemas/product-details.schema';
+import { OrderNumberUtil } from '../util/order-number.util';
+import { ShipmentDetails } from '../database/schemas/shipment-details.schema';
 
 @Injectable()
 export class OrderService {
+  private readonly BATCH_SIZE = 100; // Process in smaller chunks
+
   constructor(
     @InjectModel(Order.name) private orderModel: Model<Order>,
     @InjectModel(ProductDetails.name)
@@ -57,10 +59,10 @@ export class OrderService {
     const [entities, totalCount] = await Promise.all([
       this.orderRepository.find({
         ...mongoFilter,
-        page: filter.page,
-        limit: filter.limit,
-        sortColumn: filter.sortColumn,
-        sortOrder: filter.sortOrder,
+        page: filter.page ?? 1,
+        limit: filter.limit ?? 10,
+        sortColumn: filter.sortColumn ?? 'date',
+        sortOrder: filter.sortOrder ?? 'DESC',
       }),
       this.orderRepository.countDocuments(mongoFilter),
     ]);
@@ -75,52 +77,74 @@ export class OrderService {
 
   async createOrder(createOrderDto: CreateOrderDto) {
     const orderNo = await this.orderNumberUtil.generateOrderNo();
+
+    if (!createOrderDto.product_details?.length) {
+      throw new Error('Order must have at least one product');
+    }
+
     const orderEntity = OrderMapper.toEntity({
       ...createOrderDto,
       orderNo,
     });
 
-    // Use lean() for better memory usage
     const result = await this.orderRepository.create(orderEntity);
 
     if (createOrderDto.product_details?.length) {
-      // Batch create product details
-      const productDetails = await this.productDetailsModel.insertMany(
-        createOrderDto.product_details.map((product, index) => ({
-          ...product,
-          id: index + 1,
-          order_id: result._id,
-        })),
-      );
+      // Process product details in batches
+      const batches = [];
+      for (
+        let i = 0;
+        i < createOrderDto.product_details.length;
+        i += this.BATCH_SIZE
+      ) {
+        const batch = createOrderDto.product_details
+          .slice(i, i + this.BATCH_SIZE)
+          .map((product, index) => ({
+            ...product,
+            id: i + index + 1,
+            order_id: result._id,
+          }));
+        batches.push(batch);
+      }
 
-      // Create shipment in same transaction
-      const [updatedOrder] = await Promise.all([
-        this.orderModel
-          .findByIdAndUpdate(
-            result._id,
-            {
-              $push: { product_details: { $each: productDetails } },
-              $set: {
-                shipment_details: [
-                  {
-                    id: 1,
-                    order_id: result._id,
-                    order_no: orderNo,
-                    status: 'Requested',
-                    delivered_quantity: 0,
-                    delivered_by: 'Not Assigned',
-                    delivered_date: new Date(),
-                    total_price: result.orderValue,
-                    grand_total: result.orderValue,
-                  },
-                ],
-              },
+      // Insert batches sequentially
+      const productDetails = [];
+      for (const batch of batches) {
+        const details = await this.productDetailsModel.insertMany(batch, {
+          lean: true,
+        });
+        productDetails.push(...details);
+      }
+
+      // Update order with minimal memory usage
+      const updatedOrder = await this.orderModel
+        .findByIdAndUpdate(
+          result._id,
+          {
+            $push: {
+              product_details: { $each: productDetails.map((pd) => pd._id) },
             },
-            { new: true, lean: true },
-          )
-          .populate('product_details', null, null, { lean: true })
-          .populate('shipment_details', null, null, { lean: true }),
-      ]);
+            $set: {
+              shipment_details: [
+                {
+                  id: 1,
+                  order_id: result._id,
+                  order_no: orderNo,
+                  status: 'Requested',
+                  delivered_quantity: 0,
+                  delivered_by: 'Not Assigned',
+                  delivered_date: new Date(),
+                  total_price: result.orderValue,
+                  grand_total: result.orderValue,
+                },
+              ],
+            },
+          },
+          { new: true, lean: true },
+        )
+        .select('_id orderNo orderValue quantity businessName status date')
+        .populate('product_details', '-__v', null, { lean: true })
+        .populate('shipment_details', '-__v', null, { lean: true });
 
       return OrderMapper.toBasicInfoDTO(updatedOrder);
     }
